@@ -146,10 +146,16 @@ interface UpdateState {
    *  for this platform. See `releaseHasNoBuildForThisPlatform`. */
   noBuildForPlatform: boolean
   dismissed: string | null
-  /** Fetch the update in the background as soon as it is found, so the badge
-   *  offers a one-click Restart instead of a download the user has to sit
-   *  through. Never auto-INSTALLS: nothing restarts without a click. */
+  /** Fetch the update in the background as soon as a check finds one, so the
+   *  badge offers a one-click Restart instead of a download the user has to
+   *  sit through. Never auto-INSTALLS: nothing restarts without a click.
+   *  Off unless the user turns it on. */
   autoDownload: boolean
+  /** Ask GitHub Releases on a timer. Off unless the user turns it on.
+   *  "Check for updates" still runs when they click it. */
+  automaticChecks: boolean
+  /** Bumped once so an install that saved the old "on" defaults is opted out. */
+  updatePrivacyRevision: number
 
   downloadStatus: DownloadStatus
   downloadProgress: number
@@ -177,6 +183,7 @@ interface UpdateState {
   dismissUpdate: () => void
   clearDismiss: () => void
   setAutoDownload: (on: boolean) => void
+  setAutomaticChecks: (on: boolean) => void
   openReleasePage: () => void
 }
 
@@ -273,7 +280,9 @@ export const useUpdateStore = create<UpdateState>()(
       lastCheckFailed: false,
       noBuildForPlatform: false,
       dismissed: null,
-      autoDownload: true,
+      autoDownload: false,
+      automaticChecks: false,
+      updatePrivacyRevision: 1,
 
       downloadStatus: 'idle',
       downloadProgress: 0,
@@ -590,10 +599,15 @@ export const useUpdateStore = create<UpdateState>()(
       setAutoDownload: (on: boolean) => {
         set({ autoDownload: on })
         // Turning it on with an update already waiting should act immediately,
-        // not at the next 6h tick.
+        // not at the next 6h tick. The download is the click.
         if (on && get().updateAvailable && get().downloadStatus === 'idle') {
           void get().downloadUpdate()
         }
+      },
+
+      setAutomaticChecks: (on: boolean) => {
+        set({ automaticChecks: on })
+        if (on) void get().checkForUpdate(true)
       },
 
       openReleasePage: () => {
@@ -613,6 +627,8 @@ export const useUpdateStore = create<UpdateState>()(
         updateAvailable: state.updateAvailable,
         releaseNotes: state.releaseNotes,
         autoDownload: state.autoDownload,
+        automaticChecks: state.automaticChecks,
+        updatePrivacyRevision: state.updatePrivacyRevision,
         // "Dismiss" gilt fuer genau diese Version und muss den Neustart
         // ueberstehen (T1-Nachttest 3.0.9: der Hinweis stand nach jedem Start
         // wieder da). Eine neuere Version vergleicht sich in UpdateBadge gegen
@@ -626,6 +642,14 @@ export const useUpdateStore = create<UpdateState>()(
       // a 6h cooldown and a stale `latestVersion` survives in localStorage.
       onRehydrateStorage: () => (state) => {
         if (!state) return
+        // The previous build checked and downloaded on its own. That saved
+        // "on" was the default, not a choice. One revision opts every existing
+        // install out; a later toggle is kept.
+        if (state.updatePrivacyRevision !== 1) {
+          state.automaticChecks = false
+          state.autoDownload = false
+          state.updatePrivacyRevision = 1
+        }
         if (state.latestVersion && !isNewerVersion(state.latestVersion, currentVersion)) {
           state.latestVersion = null
           state.updateAvailable = false
@@ -727,15 +751,16 @@ export function initUpdateChecker() {
   if (_initDone) return
   _initDone = true
 
-  setTimeout(() => {
-    const { lastChecked, checkForUpdate } = useUpdateStore.getState()
+  const tick = (startup: boolean) => {
+    const { automaticChecks, lastChecked, checkForUpdate } = useUpdateStore.getState()
+    if (!automaticChecks) return
     // Erzwingen, sobald die letzte Pruefung aelter als die Viertelstunde ist:
     // sonst faengt der 6-Stunden-Deckel diesen Aufruf ab, und ein Nutzer, der
     // die App oft neu startet, sieht nie eine Pruefung.
-    void checkForUpdate(!lastChecked || Date.now() - lastChecked > STARTUP_STALE)
-  }, INITIAL_DELAY)
+    void checkForUpdate(startup && (!lastChecked || Date.now() - lastChecked > STARTUP_STALE))
+  }
 
-  setInterval(() => {
-    useUpdateStore.getState().checkForUpdate()
-  }, CHECK_INTERVAL)
+  setTimeout(() => tick(true), INITIAL_DELAY)
+
+  setInterval(() => tick(false), CHECK_INTERVAL)
 }

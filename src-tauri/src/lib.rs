@@ -1237,7 +1237,8 @@ pub fn run() {
             commands::proxy::register_openai_host,
             commands::proxy::pull_model_stream,
             commands::proxy::cancel_model_pull,
-            // The Cloud switch counts its presses anonymously (funnel.rs)
+            // Retired counter. The command stays so an older frontend does not
+            // error, and it does not open a connection (funnel.rs).
             commands::funnel::funnel_ping,
             // B7 (the web app Phase 4 inspiration) — one-shot diagnostic probe
             commands::health::system_health,

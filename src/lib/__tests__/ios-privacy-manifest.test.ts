@@ -4,14 +4,14 @@
  * `PrivacyInfo.xcprivacy` erklaert je erhobenem Datentyp, ob er mit dem Konto
  * verknuepft ist (NSPrivacyCollectedDataTypeLinked). Die Angabe muss zu dem
  * passen, was das Handy wirklich sendet, und zu den Angaben in App Store
- * Connect. Runde 8: Der Zaehler des Cloud-Schalters stand als verknuepft im
- * Manifest, das Handy sendet ihn aber ohne Sitzung.
+ * Connect. Der Zaehler des Cloud-Schalters wurde entfernt und steht nicht
+ * mehr im Manifest.
  *
  * Der Waechter liest Quellen, er sendet nichts:
  *   1  Die Liste der erklaerten Typen ist bekannt. Ein neuer Typ braucht hier
  *      eine Zeile mit seinem Anker im Code.
- *   2  Nicht verknuepft (Zaehler): Unter src/mobile ruft niemand den Zaehler je
- *      Konto, und was `funnel_ping` sendet, traegt nichts vom Nutzer.
+ *   2  Der Zaehler ist weg: kein ProductInteraction im Manifest, und weder
+ *      `funnel_ping` noch die TypeScript-Seite oeffnen dafuer eine Verbindung.
  *   3  Verknuepft (Konto, Inhalte, Bilder, Sprache): Die Aufrufe laufen ueber
  *      `cloudFetch` oder eine Sitzung, also mit dem Token des Kontos.
  *
@@ -84,58 +84,45 @@ const declared = declaredTypes(manifest)
 
 describe('iOS-Datenschutz-Manifest: erklaerte Daten und sendender Code', () => {
   it('erklaert genau die bekannten Datentypen, keiner dient dem Tracking', () => {
-    expect([...declared.keys()].sort()).toEqual(['AudioData', 'EmailAddress', 'OtherUserContent', 'PhotosorVideos', 'ProductInteraction', 'UserID'])
+    expect([...declared.keys()].sort()).toEqual(['AudioData', 'EmailAddress', 'OtherUserContent', 'PhotosorVideos', 'UserID'])
     expect(manifest).toMatch(/<key>NSPrivacyTracking<\/key>\s*<false\/>/)
+    expect(manifest).not.toContain('NSPrivacyCollectedDataTypeProductInteraction')
+    expect(manifest).not.toContain('NSPrivacyCollectedDataTypePurposeAnalytics')
     for (const [type, d] of declared) expect(d.tracking, `${type}: Tracking`).toBe(false)
-    expect(declared.get('ProductInteraction')?.purposes).toEqual(['Analytics'])
     for (const type of ['AudioData', 'EmailAddress', 'OtherUserContent', 'PhotosorVideos', 'UserID']) {
       expect(declared.get(type)?.purposes, type).toEqual(['AppFunctionality'])
     }
   })
 
-  describe('Zaehler des Cloud-Schalters (ProductInteraction): nicht verknuepft', () => {
-    // Wer den Zaehler je Konto sendet oder ruft. Der Desktop darf das, das Handy nicht.
-    const PER_ACCOUNT = /reportCloudSwitch\s*\(|reportCloudSwitchForAccount|\/api\/funnel\/switch/
+  describe('Zaehler des Cloud-Schalters: entfernt', () => {
+    const PER_ACCOUNT = /reportCloudSwitchForAccount|\/api\/funnel\/switch/
     const all = sources('src')
-    const perAccount = all.filter((f) => PER_ACCOUNT.test(read(f)) && f !== 'src/api/cloud/switch-counter.ts')
     const phone = all.filter((f) => f.startsWith('src/mobile/'))
 
-    it('das Manifest sagt "nicht verknuepft"', () => {
-      expect(declared.get('ProductInteraction')?.linked).toBe(false)
+    it('unter src/mobile ruft niemand den alten Zaehler', () => {
+      const hits = phone.filter((f) => PER_ACCOUNT.test(read(f)) || /backendCall\(\s*'funnel_ping'/.test(read(f)))
+      expect(hits).toEqual([])
     })
 
-    it('unter src/mobile sendet und ruft niemand den Zaehler je Konto', () => {
-      expect(perAccount, 'der Anker fehlt: api/funnel.ts kennt den Zaehler je Konto nicht mehr').toContain('src/api/funnel.ts')
-      const why = 'Das Handy zaehlt jetzt je Konto. Dann: NSPrivacyCollectedDataTypeLinked fuer ProductInteraction auf true, App Store Connect und den Text der Seite Privacy nachziehen.'
-      expect(perAccount.filter((f) => f.startsWith('src/mobile/')), why).toEqual([])
-      const reached = phone.flatMap((f) => importsOf(f).filter((i) => perAccount.includes(i) && i !== 'src/api/funnel.ts').map((i) => `${f} -> ${i}`))
-      expect(reached, why).toEqual([])
-      // api/funnel.ts selbst darf das Handy nur fuer die anonyme Haelfte oder die Namen der Ereignisse lesen.
-      const funnelUsers = phone.filter((f) => importsOf(f).includes('src/api/funnel.ts'))
-      for (const f of funnelUsers) expect(read(f), `${f}: ${why}`).not.toMatch(PER_ACCOUNT)
-    })
-
-    it('der Zaehler des Handys ruft nur die anonyme Haelfte, und die geht nicht ueber die Sitzung', () => {
+    it('die anonyme Haelfte oeffnet keine Verbindung', () => {
       const counter = read('src/api/cloud/switch-counter.ts').replace(/\/\*[\s\S]*?\*\//g, '')
       expect(counter).toContain('reportCloudSwitchAnonymous(action)')
-      expect(counter).not.toMatch(PER_ACCOUNT)
+      expect(counter).not.toMatch(/cloudFetch|funnel_ping/)
       const funnel = read('src/api/funnel.ts')
       const from = funnel.indexOf('export function reportCloudSwitchAnonymous')
       const anonymous = funnel.slice(from, funnel.indexOf('\n}\n', from))
-      expect(anonymous).toContain("backendCall('funnel_ping', { event })")
-      expect(anonymous).not.toMatch(/cloudFetch|getAccessToken|session|token/)
+      expect(anonymous).not.toContain('backendCall')
+      expect(anonymous).not.toMatch(/cloudFetch|getAccessToken|fetch\(/)
+      expect(funnel).not.toContain("backendCall('funnel_ping'")
+      expect(funnel).not.toContain('/api/funnel/switch')
     })
 
-    it('funnel_ping sendet Ereignis, Plattform und App-Version, sonst nichts', () => {
+    it('funnel_ping sendet nichts', () => {
       const rust = read('src-tauri/src/commands/funnel.rs')
-      const from = rust.indexOf('pub(crate) fn funnel_payload')
-      const payload = rust.slice(from, rust.indexOf('\n}\n', from))
-      expect([...payload.matchAll(/"(p_[a-z_]+)"\s*:/g)].map((m) => m[1]).sort()).toEqual(['p_app_version', 'p_event', 'p_platform'])
       const cmdFrom = rust.indexOf('pub async fn funnel_ping')
       const command = rust.slice(cmdFrom, rust.indexOf('#[cfg(test)]', cmdFrom))
-      // Der Schluessel im Kopf ist der oeffentliche des Projekts, nicht der eines Nutzers.
-      expect(command).toContain('format!("Bearer {LUC_SUPABASE_ANON_KEY}")')
-      expect(command).not.toMatch(/user_id|email|access_token|session|device_id|identifier_for_vendor/i)
+      expect(command).toContain('Ok(())')
+      expect(command).not.toMatch(/reqwest|supabase|http|spawn/i)
     })
   })
 

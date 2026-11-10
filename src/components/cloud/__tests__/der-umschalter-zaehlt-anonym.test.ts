@@ -45,13 +45,17 @@ describe('the Cloud switch counts its presses', () => {
 
   it('is written into Settings so the privacy text stays true', () => {
     const settings = read('src/components/settings/SettingsPage.tsx')
-    // What goes with a press, and that it carries no identifier.
-    expect(settings).toContain('counts each press of the Cloud switch with LU Labs: which way it was pressed, platform and app version, no identifier')
-    // Signed in, the same press is counted for the account too (api/funnel.ts).
-    expect(settings).toContain('a press of the Cloud switch is counted for your account as well')
-    // The clicks in the gate pop-up are counted too, without the model.
-    expect(settings).toContain('A click in the window behind the switch counts the same way: that a model, a plan or a pack was clicked, not which model.')
-    // A counter and "no telemetry" do not go on the same page.
+    expect(settings).toContain('does not count presses of the Cloud switch')
+    expect(settings).toContain('Presses of the Cloud switch are not counted')
+    expect(settings).toContain('Update checks are off until you turn them on under Updates')
+    expect(settings).not.toContain('counts each press of the Cloud switch')
     expect(settings).not.toMatch(/no telemetry/i)
+  })
+
+  it('the reporter does not open a connection', () => {
+    const ts = read('src/api/funnel.ts')
+    expect(ts).not.toContain('backendCall')
+    expect(ts).not.toContain('cloudFetch')
+    expect(ts).not.toContain('/api/funnel/switch')
   })
 })

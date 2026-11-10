@@ -179,14 +179,13 @@ export default {
   // Store-Preset des Baus, wenn der Testhaken es nicht verraet: open | play | appstore
   storePreset: process.env.STORE_PRESET ?? null,
 
-  // Persistenz: Die Einstellung ist ein echter Schalter der App (Settings, Privacy, "Send anonymous switch count"),
-  // erreicht ueber seinen Tippweg. Er liegt in einem Schluessel, den die App sofort sichert, hat keine Wirkung
-  // nach aussen, und bliebe er nach einem abgebrochenen Lauf verstellt, waere das die sparsamere Seite.
+  // Persistenz: ein echter Schalter, der nichts nach aussen sendet (Settings, Voice, Vorlesen).
+  // Der alte Zaehler-Schalter auf Privacy ist weg: er hat den Cloud-Schalter gezaehlt.
   persistenz: {
     naht: schalterNaht({
-      oeffne: (d) => geheWeg(d, WEGE['/settings/privacy']),
-      schalter: tid('m-settings-privacy-counter'),
-      name: 'm-settings-privacy-counter',
+      oeffne: (d) => geheWeg(d, WEGE['/settings/voice']),
+      schalter: tid('m-settings-voice-read-aloud'),
+      name: 'm-settings-voice-read-aloud',
     }),
   },
 
