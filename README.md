@@ -210,7 +210,7 @@ If you already run a local engine, the app finds it and lists it instead of inst
 ## FAQ
 
 **Is it really free and offline?**
-Yes. AGPL-3.0, no account, no usage limits. In local mode chat, agent runs and image and video generation all happen on your machine, and after the model download they work without a connection. The app has no analytics kit and sends no crash reports. On its own it uses the network for two things: it checks GitHub Releases for updates shortly after start and at most every six hours after that, and it counts each press of the Cloud switch (which way, platform, app version, no identifier). While you are signed in to LU Cloud it also checks your account every five minutes. Settings, General, Privacy has the full list.
+Yes. AGPL-3.0, no account, no usage limits. In local mode chat, agent runs and image and video generation all happen on your machine, and after the model download they work without a connection. The app has no analytics kit, sends no crash reports, and does not count presses of the Cloud switch. It does not check for updates until you turn that on under Settings, Updates. While you are signed in to LU Cloud it checks your account every five minutes. The full list of addresses is in PRIVACY/NETWORK.md, and the same facts are in Settings, General, Privacy.
 
 **What does "uncensored" mean?**
 Abliterated models have the trained in refusal behaviour removed from the weights, so it is not a jailbreak that can be patched or break. They answer directly, without refusals. [Full guide](https://locallyuncensored.com/blog/abliterated-models-guide.html).

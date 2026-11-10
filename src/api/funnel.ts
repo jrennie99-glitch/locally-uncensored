@@ -1,16 +1,10 @@
 /**
- * One anonymous counter for the Cloud switch (2026-09-06): how many
- * presses open the gate, arm the switch, enter Cloud or go back to Local.
- *
- * The frontend hands the Rust side nothing but the event name; platform and
- * app version are read there, and the four names are the whole allowlist on
- * both sides (commands/funnel.rs and the server). Fire and
- * forget: the switch never waits on the counter and never hears from it, so a
- * machine without a connection, a web build without Tauri, or a server that
- * is down all cost the press nothing.
+ * The Cloud switch used to report each press (and each click in the gate)
+ * to LU Labs: an event name, the platform and the app version, and, when
+ * somebody was signed in, the same event on the account. That was telemetry.
+ * The names stay so callers and the old command keep compiling. Nothing is
+ * sent.
  */
-import { backendCall } from './backend'
-import { cloudFetch } from './cloud/client'
 import type { CloudSwitchAction } from '../lib/cloud-switch-guard'
 
 export type FunnelEvent =
@@ -38,59 +32,24 @@ export function funnelEventFor(action: CloudSwitchAction): FunnelEvent {
 }
 
 export function reportCloudSwitch(action: CloudSwitchAction): void {
-  const event = reportCloudSwitchAnonymous(action)
-  reportCloudSwitchForAccount(event)
+  reportCloudSwitchAnonymous(action)
 }
 
-/** A click in the gate pop-up, counted like a press of the switch. */
-export function reportCloudGate(event: GateFunnelEvent): void {
-  reportFunnelAnonymous(event)
-  reportCloudSwitchForAccount(event)
+/** A click in the gate pop-up. Not reported. */
+export function reportCloudGate(_event: GateFunnelEvent): void {
+  /* the gate does not phone home */
 }
 
 /**
- * The anonymous half alone: event name, platform, app version, no session.
- * The phone counts only through this one (api/cloud/switch-counter.ts), so
- * its Privacy page can say "No account, no content" and be right
- * (durchsicht-mobile M2). Returns the event it counted.
+ * Returns the event name and does not send it. The phone still calls this
+ * through the preference gate (api/cloud/switch-counter.ts) so a later change
+ * cannot grow a request on one side only.
  */
 export function reportCloudSwitchAnonymous(action: CloudSwitchAction): FunnelEvent {
-  // Written out here, not through reportFunnelAnonymous: the Privacy check of
-  // the phone (ios-privacy-manifest.test.ts) reads this body for what it sends.
-  const event = funnelEventFor(action)
-  try {
-    void backendCall('funnel_ping', { event }).catch(() => {})
-  } catch {
-    /* no bridge (web build): the press is simply not counted */
-  }
-  return event
+  return funnelEventFor(action)
 }
 
-function reportFunnelAnonymous(event: FunnelEvent): FunnelEvent {
-  try {
-    void backendCall('funnel_ping', { event }).catch(() => {})
-  } catch {
-    /* no bridge (web build): the press is simply not counted */
-  }
-  return event
-}
-
-/**
- * The same press once more, per account (2026-09-07: split the
- * presses into subscribers and the rest, and see how often one person
- * presses). Signed in only: cloudFetch has no session for a signed-out
- * session and throws, and that press stays anonymous by design. Fire and
- * forget like the anonymous counter; a dead network costs the press nothing.
- */
-export function reportCloudSwitchForAccount(event: FunnelEvent): void {
-  try {
-    void cloudFetch('/api/funnel/switch', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ event }),
-      timeoutMs: 5_000,
-    }).catch(() => {})
-  } catch {
-    /* nothing to count without a session */
-  }
+/** The per-account counter. Removed: a signed-in press is not reported either. */
+export function reportCloudSwitchForAccount(_event: FunnelEvent): void {
+  /* a signed-in press is not reported */
 }

@@ -1,7 +1,5 @@
 /**
- * durchsicht-mobile M2: the counter of the Cloud switch on the phone is
- * anonymous. The Privacy page says "No account, no content", so no press may
- * go out with the session of a signed-in user.
+ * The Cloud switch counter does not leave the phone, signed in or not.
  *
  * Run: npx vitest run src/api/__tests__/mobile-switch-counter-anonymous.test.ts
  */
@@ -27,23 +25,22 @@ beforeEach(() => {
 })
 
 describe('the counter of the Cloud switch', () => {
-  it('phone: only the anonymous ping, never a request with the session', () => {
+  it('phone: a press sends nothing, with or without a session', () => {
     for (const action of ['open-gate', 'arm', 'enter-cloud', 'leave-cloud'] as const) countCloudSwitch(action)
-    expect(mocks.backendCall).toHaveBeenCalledTimes(4)
-    expect(mocks.backendCall).toHaveBeenCalledWith('funnel_ping', { event: 'cloud_switch_enter' })
-    for (const call of mocks.backendCall.mock.calls as unknown as [string, Record<string, unknown>][]) expect(Object.keys(call[1])).toEqual(['event'])
+    expect(mocks.backendCall).not.toHaveBeenCalled()
     expect(mocks.cloudFetch).not.toHaveBeenCalled()
   })
 
-  it('DESKTOP UNCHANGED: reportCloudSwitch still counts per account as well', () => {
+  it('desktop: a press is not counted for the account either', () => {
     reportCloudSwitch('enter-cloud')
-    expect(mocks.backendCall).toHaveBeenCalledTimes(1)
-    expect(mocks.cloudFetch).toHaveBeenCalledWith('/api/funnel/switch', expect.objectContaining({ method: 'POST' }))
+    expect(mocks.backendCall).not.toHaveBeenCalled()
+    expect(mocks.cloudFetch).not.toHaveBeenCalled()
   })
 
   it('nothing under src/mobile counts around the anonymous counter', () => {
     const counter = readFileSync(resolve(__dirname, '../cloud/switch-counter.ts'), 'utf8')
     expect(counter).not.toMatch(/reportCloudSwitch\(|reportCloudSwitchForAccount/)
     expect(SETTINGS_STRINGS.privacy.counter).toContain('No account, no content')
+    expect(SETTINGS_STRINGS.privacy.counter).toContain('are not counted')
   })
 })

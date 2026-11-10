@@ -222,7 +222,7 @@ describe('endpointMap covers every backendCall/invokeMedia site the frontend can
     'tray_memory', 'tray_update',
     // Restore chats from backup (3.0.10): reads store_backup*.json, only behind isTauri().
     'chat_backup_conversations',
-    'exit_app', 'file_read', 'find_orphan_downloads', 'fix_comfyui_cors', 'funnel_ping',
+    'exit_app', 'file_read', 'find_orphan_downloads', 'fix_comfyui_cors',
     'get_comfy_gpu_status', 'get_current_time', 'import_local_model', 'install_character_trainer',
     'install_lmstudio', 'install_lmstudio_status', 'install_method', 'install_python',
     'install_python_status', 'installed_piper_voices', 'is_onboarding_done', 'kv_slot_action',

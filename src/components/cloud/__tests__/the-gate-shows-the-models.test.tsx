@@ -2,7 +2,7 @@
 /**
  * The gate pop-up for somebody without an account (3.0.7): three dropdowns,
  * Chat, Code and Create, in the app's own Cloud mode picker. A row is not
- * usable here; its click is counted, remembered, and opens the two ways in,
+ * usable here; the click is remembered and opens the two ways in. It is not counted.
  * each one button to the checkout with the model.
  *
  * Run: npx vitest run src/components/cloud/__tests__/the-gate-shows-the-models.test.tsx
@@ -96,11 +96,11 @@ describe('the gate shows the models behind the switch', () => {
     expect(within(screen.getByTestId('gate-menu-create')).getByText('Qwen Image 2.1')).toBeTruthy()
   })
 
-  it('a click is counted, kept, and opens the two ways with results and one button each', async () => {
+  it('a click is kept, is not counted, and opens the two ways with results and one button each', async () => {
     await openGate()
     fireEvent.click(screen.getByTestId('gate-dropdown-create'))
     fireEvent.click(within(screen.getByTestId('gate-menu-create')).getByText('Flux Dev'))
-    expect(events()).toEqual(['cloud_gate_model_click'])
+    expect(events()).toEqual([])
     expect(useCloudGateStore.getState().pick).toMatchObject({ model: 'flux-dev', category: 'create', kind: 'image' })
 
     const win = screen.getByTestId('gate-buy-window')
@@ -111,7 +111,7 @@ describe('the gate shows the models behind the switch', () => {
 
     fireEvent.click(screen.getByTestId('gate-checkout-sub'))
     fireEvent.click(screen.getByTestId('gate-checkout-credits'))
-    expect(events()).toEqual(['cloud_gate_model_click', 'cloud_gate_pick_sub', 'cloud_gate_pick_credits'])
+    expect(events()).toEqual([])
     const [sub, pack] = openExternal.mock.calls.map((c) => new URL((c as unknown[])[0] as string))
     expect(sub.pathname).toBe('/checkout/start')
     expect(sub.searchParams.get('plan')).toBe('hosted')

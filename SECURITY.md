@@ -28,7 +28,7 @@ Locally Uncensored is maintained by a small team, so these are targets, not a co
 | Latest release (see [Releases](https://github.com/PurpleDoubleD/locally-uncensored/releases/latest)) | Yes |
 | Any older release | No, the fix is the update |
 
-The app looks for a new version shortly after start and at most every six hours after that. **Settings → Updates** shows the installed version and what it found.
+Update checks are off until you turn them on under **Settings → Updates**. A manual **Check for updates** asks GitHub Releases once. With the automatic check on, the app looks shortly after start and at most every six hours after that. **Settings → Updates** shows the installed version and what it found. Downloading an update is a second switch, also off until you turn it on, and installing always needs a click.
 
 ## In scope
 

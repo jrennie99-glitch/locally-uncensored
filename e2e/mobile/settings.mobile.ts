@@ -1133,39 +1133,26 @@ for (const size of SIZES) {
       await expect(page.getByTestId('m-cloud-screen')).toHaveCount(0)
     })
 
-    test('Privacy: the anonymous counter can be switched off, stays off, and then nothing is counted', async ({ page }) => {
+    test('Privacy: the Cloud switch is not counted, and the page says so', async ({ page }) => {
       const backend = freshBackend()
       await mockBackend(page, backend)
-      const counted = () => backend.calls.filter((c) => c === 'POST cloud/api/funnel/switch').length
+      const counted = () => backend.calls.filter((c) => c === 'POST cloud/api/funnel/switch' || c === 'funnel_ping').length
       await openSignedIn(page, '/cloud')
       await page.getByTestId('m-cloud-turn-on').tap()
       await page.getByTestId('m-dialog-confirm').tap()
       await page.getByTestId('m-consent-agree').tap()
       await expect(page.getByTestId('m-toast-cloud-on')).toBeVisible()
-      // The phone counts anonymously only (review M2): the count per account is never sent, signed in or not.
-      // The anonymous ping is a command of the native layer and does not exist in this browser run; that it
-      // obeys the switch below is held by src/api/__tests__/mobile-switch-counter-anonymous.test.ts.
       await page.waitForTimeout(300)
       expect(counted()).toBe(0)
 
       await openShell(page, { route: '/settings/privacy' })
       await expectClean(page)
-      const counter = page.getByTestId('m-settings-privacy-counter')
-      await expect(counter).toHaveAttribute('aria-checked', 'true')
-      // N15: while the counter is on the page does not claim "no analytics", and it says when the counter sends at all.
-      await expect(page.getByTestId('m-settings-privacy-nothing-else')).toHaveText('Apart from that one counter LU has no analytics. No ad tracking, and your chats are not read for training.')
-      await expect(page.getByTestId('m-settings-privacy-screen')).toContainText('Nothing is sent before you tap that switch')
-      await counter.tap()
-      await expect(counter).toHaveAttribute('aria-checked', 'false')
-      await expect(page.getByTestId('m-settings-privacy-nothing-else')).toContainText('With the counter off LU has no analytics at all.')
-      await expect(page.getByTestId('m-settings-privacy-counter-state')).toHaveText('The switch count is off')
+      await expect(page.getByTestId('m-settings-privacy-counter')).toHaveCount(0)
+      await expect(page.getByTestId('m-settings-privacy-nothing-else')).toHaveText('LU has no analytics. No ad tracking, no switch counter, and your chats are not read for training.')
+      await expect(page.getByTestId('m-settings-privacy-screen')).toContainText('are not counted and are not sent')
       await page.getByTestId('m-settings-privacy-policy').tap()
       expect(await opened(page)).toContain(`${CLOUD}/privacy`)
 
-      await openShell(page, { route: '/settings/privacy' })
-      await expect(page.getByTestId('m-settings-privacy-counter')).toHaveAttribute('aria-checked', 'false')
-
-      const before = counted()
       await openShell(page, { route: '/cloud' })
       await page.getByTestId('m-cloud-turn-off').tap()
       await expect(page.getByTestId('m-toast-cloud-off')).toBeVisible()
@@ -1173,7 +1160,7 @@ for (const size of SIZES) {
       await page.getByTestId('m-dialog-confirm').tap()
       await expect(page.getByTestId('m-toast-cloud-on')).toBeVisible()
       await page.waitForTimeout(300)
-      expect(counted()).toBe(before)
+      expect(counted()).toBe(0)
     })
 
     test('Providers: a key is saved, tested and deleted, and is never shown', async ({ page }) => {
@@ -3754,8 +3741,7 @@ test.describe('settings in the installed app (mocked native layer)', () => {
     await openShell(page, { route: '/settings/appearance' })
     await page.getByTestId('m-settings-appearance-theme-light').tap()
     await openShell(page, { route: '/settings/privacy' })
-    await page.getByTestId('m-settings-privacy-counter').tap()
-    await expect(page.getByTestId('m-settings-privacy-counter')).toHaveAttribute('aria-checked', 'false')
+    await expect(page.getByTestId('m-settings-privacy-screen')).toContainText('are not counted and are not sent')
 
     await openShell(page, { route: '/settings/data' })
     await expect(page.getByTestId('m-settings-data-auto')).toContainText('Automatic backup')
@@ -3775,7 +3761,6 @@ test.describe('settings in the installed app (mocked native layer)', () => {
     const last = JSON.parse(record.backups.at(-1) ?? '{}') as Record<string, string>
     // The phone settings are part of it.
     expect(last['lu-mobile-theme']).toBe('light')
-    expect(JSON.parse(last['lu-mobile-settings-prefs']).state.switchCounter).toBe(false)
     // The provider keeps its entry, without the key.
     const providers = JSON.parse(last['lu-providers']) as { state: { providers: Record<string, { apiKey?: string; baseUrl?: string }> } }
     const entries = Object.values(providers.state.providers)

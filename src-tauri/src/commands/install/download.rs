@@ -47,7 +47,7 @@ pub(super) fn download_file_blocking(
 ) -> Result<(), String> {
     let client = reqwest::blocking::Client::builder()
         .user_agent(crate::app_identity::outgoing_agent!("2.3"))
-        .redirect(reqwest::redirect::Policy::limited(10))
+        .redirect(crate::commands::proxy::https_download_redirect_policy(10))
         // This path pulls installers and archives (hundreds of MB), so the
         // whole-request deadline still fits. The blocking client has no
         // read_timeout; the model downloader, which handles the 40 GB+ files,

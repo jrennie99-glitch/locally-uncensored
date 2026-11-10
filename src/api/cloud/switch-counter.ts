@@ -1,20 +1,11 @@
 /**
- * The anonymous counter of the Cloud switch, with its opt out.
+ * The old anonymous counter of the Cloud switch, with its opt out.
  *
- * `reportCloudSwitch` (api/funnel.ts) counts a press and knows nothing about
- * a preference. It also counts the press a second time per account when
- * somebody is signed in. The phone promises an anonymous counter ("No
- * account, no content"), so it sends the anonymous half only
- * (`reportCloudSwitchAnonymous`): no session, no token, whoever is signed in.
- *
- * On the phone the user can switch the counter off (Settings, Privacy), and the place that obeys that switch has to be the counter
- * itself: a screen that changes the mode on its own must not have to remember
- * it. So everything on the phone that enters or leaves Cloud counts through
- * `countCloudSwitch`, never through `reportCloudSwitch`; a guard test in
- * src/mobile/screens/settings/__tests__ keeps it that way.
- *
- * On the desktop the preference does not exist, the answer is "count", and
- * the desktop keeps calling `reportCloudSwitch` as before.
+ * `reportCloudSwitchAnonymous` no longer sends anything. This function still
+ * consults the phone preference and still calls that hook, so a screen cannot
+ * grow a request of its own: the only door is here, and the door does not
+ * open a connection. A guard test under src/mobile keeps every screen on this
+ * door.
  */
 import { reportCloudSwitchAnonymous } from '../funnel'
 import type { CloudSwitchAction } from '../../lib/cloud-switch-guard'

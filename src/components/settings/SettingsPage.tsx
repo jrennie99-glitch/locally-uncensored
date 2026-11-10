@@ -2244,7 +2244,7 @@ export function SettingsPage() {
                   <Shield size={12} className="mt-0.5 shrink-0 text-emerald-500" />
                   <div>
                     <p className="text-gray-700 dark:text-gray-300 font-medium mb-0.5">Local mode runs on your machine.</p>
-                    <p>In local mode chat, agent runs, and image &amp; video generation all execute on your machine. LU has no analytics kit and sends no crash reports. In both modes it checks GitHub Releases for updates and counts each press of the Cloud switch. Your local data lives in <DataFolderWhere />.</p>
+                    <p>In local mode chat, agent runs, and image &amp; video generation all execute on your machine. LU has no analytics kit, sends no crash reports, and does not count presses of the Cloud switch. Update checks stay off until you turn them on under Updates. Your local data lives in <DataFolderWhere />.</p>
                   </div>
                 </div>
               </div>
@@ -2254,9 +2254,9 @@ export function SettingsPage() {
                   <Lock size={12} className="mt-0.5 shrink-0 text-emerald-500" />
                   <div>
                     <p className="text-gray-700 dark:text-gray-300 font-medium mb-0.5">Local by default.</p>
-                    <p>Chat, agent runs, image &amp; video generation all execute on your machine. LU has no analytics kit and sends no crash reports.</p>
-                    <p className="mt-1">On its own LU uses the network for two things. It asks GitHub Releases for a new version a few seconds after start and at most every six hours after that; a new version is downloaded in the background unless you switch that off under Updates, and installing always needs your click. And it counts each press of the Cloud switch with LU Labs: which way it was pressed, platform and app version, no identifier. A click in the window behind the switch counts the same way: that a model, a plan or a pack was clicked, not which model.</p>
-                    <p className="mt-1">While you are signed in to LU Cloud, the app also checks your account at lu-labs.ai every five minutes, and a press of the Cloud switch is counted for your account as well.</p>
+                    <p>Chat, agent runs, image &amp; video generation all execute on your machine. LU has no analytics kit and sends no crash reports. Presses of the Cloud switch are not counted, and a click in the window behind the switch is not counted either.</p>
+                    <p className="mt-1">Nothing is sent on its own. Update checks are off until you turn them on under Updates. A check asks GitHub Releases whether a newer signed build exists. Downloading that build is a separate switch, also off until you turn it on, and installing always needs your click.</p>
+                    <p className="mt-1">While you are signed in to LU Cloud, the app checks your account at lu-labs.ai every five minutes and, while that session is signed in, asks whether LU Cloud has an outage. Signing out stops both.</p>
                     <p className="mt-1">Everything else that goes online you start yourself: model and engine downloads, cloud providers you set up with your own API keys, web search in agent runs, and Remote Access.</p>
                   </div>
                 </div>
@@ -2603,7 +2603,7 @@ export function lastCheckedText(ts: number, now: number = Date.now()): string {
 }
 
 export function UpdateSection() {
-  const { currentVersion, latestVersion, updateAvailable, releaseNotes, dismissed, isChecking, lastChecked, lastCheckFailed, noBuildForPlatform, autoDownload, downloadStatus, downloadProgress, downloadedBytes, totalBytes, errorMessage, progressNote, checkForUpdate, downloadUpdate, installAndRestart, clearDismiss, setAutoDownload, openReleasePage } = useUpdateStore()
+  const { currentVersion, latestVersion, updateAvailable, releaseNotes, dismissed, isChecking, lastChecked, lastCheckFailed, noBuildForPlatform, autoDownload, automaticChecks, downloadStatus, downloadProgress, downloadedBytes, totalBytes, errorMessage, progressNote, checkForUpdate, downloadUpdate, installAndRestart, clearDismiss, setAutoDownload, setAutomaticChecks, openReleasePage } = useUpdateStore()
   // Defensive: only treat the persisted `latestVersion` as actually newer if a
   // semver compare confirms it. Otherwise the binary was updated out-of-band
   // and the persisted value is stale (e.g. localStorage still says 2.3.8 while
@@ -2772,13 +2772,30 @@ export function UpdateSection() {
           </div>
         )}
 
-        {/* Auto-download. Downloads only, installing always stays a click, so
-            the app never restarts under the user's hands. */}
+        {/* Both off until the user opts in. A check only asks GitHub whether
+            a newer signed build exists. The download is a second choice, and
+            installing always stays a click. */}
+        <label className="flex items-start justify-between gap-3 cursor-pointer">
+          <span>
+            <span className="block t-micro text-gray-300">Check for updates automatically</span>
+            <span className="block t-micro text-gray-600 leading-relaxed">
+              Asks GitHub Releases a few seconds after start and at most every six hours after that. Off until you turn it on.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={automaticChecks}
+            onChange={(e) => setAutomaticChecks(e.target.checked)}
+            className="mt-0.5 accent-emerald-500"
+            aria-label="Check for updates automatically"
+          />
+        </label>
+
         <label className="flex items-start justify-between gap-3 cursor-pointer">
           <span>
             <span className="block text-[0.65rem] text-gray-300">Download updates automatically</span>
             <span className="block text-[0.55rem] text-gray-600 leading-relaxed">
-              Fetches the update in the background so installing is one click. Never restarts on its own.
+              After a check finds an update, fetches it in the background so installing is one click. Never restarts on its own. Off until you turn it on.
             </span>
           </span>
           <input

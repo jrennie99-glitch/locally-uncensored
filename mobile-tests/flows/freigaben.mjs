@@ -49,7 +49,6 @@ export const FREIGABEN = [
   { muster: /^m-settings-voice-(read-aloud|auto|system|dictation)$/, modus: 'tippen', grund: 'Schalter auf der Seite Voice, loesen keinen Cloud-Aufruf aus' },
   { muster: /^m-settings-voice-pick-/, modus: 'tippen', grund: 'waehlt eine Stimme aus, spielt nichts ab' },
   { testid: 'm-settings-storage-wifi', modus: 'tippen', grund: 'Schalter "nur im WLAN laden"' },
-  { testid: 'm-settings-privacy-counter', modus: 'tippen', grund: 'Schalter fuer den anonymen Zaehler' },
   { testid: 'm-chat-attach-documents', modus: 'tippen', grund: 'fuehrt zu den Dokumenten des Chats' },
   { testid: 'm-options-group', modus: 'tippen', grund: 'fuehrt zur Seite Gruppen-Chat' },
 ]

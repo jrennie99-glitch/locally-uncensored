@@ -141,24 +141,9 @@
                 <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
             </array>
         </dict>
-        <!-- Zaehler fuer den Cloud-Schalter. Das Handy sendet nur den anonymen Tageszaehler
-             (src/api/cloud/switch-counter.ts, funnel_ping in src-tauri/src/commands/funnel.rs):
-             Ereignis, Plattform, App-Version, ohne Sitzung, auch wenn jemand angemeldet ist.
-             Den Zaehler je Konto (POST /api/funnel/switch) sendet nur der Desktop. Deshalb
-             nicht verknuepft. Der Waechter src/lib/__tests__/ios-privacy-manifest.test.ts
-             haelt diese Angabe und den sendenden Code zusammen. -->
-        <dict>
-            <key>NSPrivacyCollectedDataType</key>
-            <string>NSPrivacyCollectedDataTypeProductInteraction</string>
-            <key>NSPrivacyCollectedDataTypeLinked</key>
-            <false/>
-            <key>NSPrivacyCollectedDataTypeTracking</key>
-            <false/>
-            <key>NSPrivacyCollectedDataTypePurposes</key>
-            <array>
-                <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
-            </array>
-        </dict>
+        <!-- Kein ProductInteraction: der Zaehler des Cloud-Schalters sendet nichts mehr
+             (src/api/funnel.ts, funnel_ping). App Store Connect muss die Analytics-Angabe
+             dazu ebenfalls streichen. -->
     </array>
 </dict>
 </plist>

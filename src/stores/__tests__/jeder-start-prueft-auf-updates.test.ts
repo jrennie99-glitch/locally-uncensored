@@ -1,5 +1,7 @@
 /**
- * Jeder Programmstart prueft auf Updates.
+ * Automatische Update-Pruefung, nur wenn sie eingeschaltet ist.
+ *
+ * Ab Werk ist sie aus. Ist sie an, prueft jeder Start.
  *
  * Die Startpruefung laeuft ueber `initUpdateChecker` und damit ueber
  * `plugin:updater|check`. Sie lief bis T13b trotzdem nie: `checkForUpdate()`
@@ -39,7 +41,7 @@ let fetchSpy: ReturnType<typeof vi.fn>
 
 /** Ein frisches Modul je Fall: `initUpdateChecker` traegt einen
  *  Einmal-Riegel auf Modulebene. */
-async function frischerStart(lastChecked: number | null) {
+async function frischerStart(lastChecked: number | null, automaticChecks = true) {
   vi.resetModules()
   const mod = await import('../updateStore')
   mod.useUpdateStore.setState({
@@ -50,6 +52,7 @@ async function frischerStart(lastChecked: number | null) {
     isChecking: false,
     lastChecked,
     lastCheckFailed: false,
+    automaticChecks,
   })
   mod.initUpdateChecker()
   await vi.advanceTimersByTimeAsync(5_000) // INITIAL_DELAY
@@ -72,6 +75,11 @@ afterEach(() => {
 })
 
 describe('die Startpruefung haengt an einem eigenen, kurzen Deckel', () => {
+  it('prueft von sich aus nichts, solange die Pruefung aus ist', async () => {
+    await frischerStart(null, false)
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
   it('prueft, wenn die letzte Pruefung 20 Minuten alt ist', async () => {
     await frischerStart(NOW - 20 * MINUTE)
 

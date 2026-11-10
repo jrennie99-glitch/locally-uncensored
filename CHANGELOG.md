@@ -2,6 +2,19 @@
 
 All notable changes to Locally Uncensored are documented here.
 
+## [Unreleased]
+
+### Privacy
+- The Cloud switch is not counted anymore. The anonymous counter and the
+  per-account counter are gone. `funnel_ping` stays as a command that does
+  not open a connection.
+- Update checks and background update downloads are off until you turn them
+  on under Settings, Updates. A manual check still works. Installing still
+  needs a click.
+- Installer and voice-pack downloads refuse a redirect that leaves HTTPS or
+  points at a private address.
+- What still goes online, and when, is listed in `PRIVACY/NETWORK.md`.
+
 ## [3.0.10] - 2026-11-05
 
 A fix for lost chats. When the chat list came back without its chats, the

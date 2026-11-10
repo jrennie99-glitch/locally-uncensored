@@ -484,6 +484,36 @@ pub(crate) fn ssrf_safe_redirect_policy(max: usize) -> reqwest::redirect::Policy
     })
 }
 
+/// Whether a binary or model download may follow this redirect.
+///
+/// HTTPS only, and not past `max` hops. A public installer URL that 302s onto
+/// plain HTTP would otherwise be fetched and executed with no TLS. The private
+/// host check still runs in [`https_download_redirect_policy`] after this one.
+pub(crate) fn download_redirect_stays_https(next_url: &str, hops_already: usize, max: usize) -> Result<(), &'static str> {
+    if hops_already >= max {
+        return Err("too many redirects");
+    }
+    let parsed = url::Url::parse(next_url).map_err(|_| "bad redirect")?;
+    if parsed.scheme() != "https" {
+        return Err("refusing a download that left HTTPS");
+    }
+    Ok(())
+}
+
+/// Redirect policy for installers and checksummed model files: stay on HTTPS
+/// and refuse a hop into a private or metadata address.
+pub(crate) fn https_download_redirect_policy(max: usize) -> reqwest::redirect::Policy {
+    reqwest::redirect::Policy::custom(move |attempt| {
+        if let Err(reason) = download_redirect_stays_https(attempt.url().as_str(), attempt.previous().len(), max) {
+            return attempt.error(reason);
+        }
+        match validate_public_url(attempt.url().as_str()) {
+            Ok(()) => attempt.follow(),
+            Err(_) => attempt.error("redirect to a blocked (private/metadata) host"),
+        }
+    })
+}
+
 /// A client pinned to the addresses the gate just approved. Without the pin the
 /// name is resolved a SECOND time when the socket is opened, and a resolver that
 /// answers a public IP to the check and 127.0.0.1 to the connect (DNS rebinding)
@@ -2171,6 +2201,17 @@ mod tests {
         assert!(validate_public_url("file:///etc/passwd").is_err());
         assert!(validate_public_url("ftp://example.com/x").is_err());
         assert!(validate_public_url("not a url").is_err());
+    }
+
+    #[test]
+    fn an_installer_redirect_may_not_leave_https() {
+        assert!(download_redirect_stays_https("https://github.com/ollama/ollama/releases/download/v0.1/OllamaSetup.exe", 0, 10).is_ok());
+        assert_eq!(
+            download_redirect_stays_https("http://evil.example/OllamaSetup.exe", 1, 10),
+            Err("refusing a download that left HTTPS"),
+        );
+        assert!(download_redirect_stays_https("https://cdn.example/file", 10, 10).is_err());
+        assert!(download_redirect_stays_https("not a url", 0, 10).is_err());
     }
 
     #[test]
